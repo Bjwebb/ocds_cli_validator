@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+from jsonschema import validate
+import requests
+import json_merge_patch
+import argparse
+import json
+
+parser = argparse.ArgumentParser()
+parser.add_argument('input_file')
+args = parser.parse_args()
+
+with open(args.input_file) as fp:
+    input_json = json.load(fp)
+
+release_package_schema = requests.get('http://standard.open-contracting.org/latest/en/release-package-schema.json').json()
+release_schema = requests.get('http://standard.open-contracting.org/latest/en/release-package-schema.json').json()
+print('Validating the whole file against the base release_package_schema')
+validate(input_json, release_package_schema)
+
+for release in input_json['releases']:
+    pass
