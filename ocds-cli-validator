@@ -13,9 +13,30 @@ with open(args.input_file) as fp:
     input_json = json.load(fp)
 
 release_package_schema = requests.get('http://standard.open-contracting.org/latest/en/release-package-schema.json').json()
-release_schema = requests.get('http://standard.open-contracting.org/latest/en/release-package-schema.json').json()
+release_schema = requests.get('http://standard.open-contracting.org/latest/en/release-schema.json').json()
 print('Validating the whole file against the base release_package_schema')
 validate(input_json, release_package_schema)
 
+
+def get_release_schema_json_list(schema_extension):
+    """
+    Returns a list so that we can handle dependencies in future.
+    """
+    assert schema_extension.endswith('extension.json')
+    base = schema_extension[:-len('extension.json')]
+    return [ requests.get(base+'release-schema.json').json() ]
+
 for release in input_json['releases']:
-    pass
+    if 'schemaExtensions' in release:
+        print('Validating a release against the relevant extended schema')
+        extension_release_jsons = []
+        for schema_extension in release['schemaExtensions']:
+            extension_release_jsons += get_release_schema_json_list(schema_extension)
+        extended_schema = release_schema
+        for extension_release_json in extension_release_jsons:
+            extended_schema = json_merge_patch.merge(extended_schema, extension_release_json)
+        with open('test.json', 'w') as fp:
+            json.dump(extended_schema, fp, indent=4)
+        validate(release, extended_schema) 
+    else:
+        print('No extensions for this release')
